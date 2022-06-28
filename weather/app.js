@@ -3,47 +3,10 @@ let d = new Date();
 let newDate = d.getMonth()+'.'+ d.getDate()+'.'+ d.getFullYear();
 
 //Personal API Key for OpenWeatherMap API
-
 const keyAPI= "&appid=c43718a933f937a52014793e829faf82&units=imperial";
 const baseURL =`api.openweathermap.org/data/2.5/weather?zip=`;
-const server="https://localhost:8000";
-
-// Event listener to add function to existing HTML DOM element
-let generate = document.getElementById('generate'); // selectig the generate button
-generate.addEventListener('click',generation) //event listener goes on at a click to call a function generation
-
-/* Function called by event listener */
-function generation(){
-    //selecting zip and feelings user input
-    let zip = document.getElementById('zip').value;
-    let feelings = document.getElementById('feelings').value;
-    getData(zip).then((data) => {
-        //making sure if there is data
-        if (data !== undefined && data !== null) {
-            //using destructuring to take only the data we need
-          const {
-            main: {temp},
-            name: city,
-            weather: [{main}],
-          } = data;
-          //making my own object
-          const weatherInfo = {
-            newDate,
-            city,
-            temp: Math.round(temp),
-            main,
-            feelings
-        };
-        //posting the object on the server
-        postData("/add", weatherInfo);
-        //updating the UI to show the appropriate information
-        updateUI(weatherInfo);
-     }
-})
-}
 
 /* Function to GET Web API Data*/
-
 let getData = async(zip)=>{
     try{
     fetchURL="https://"+baseURL+zip+keyAPI;
@@ -53,6 +16,7 @@ let getData = async(zip)=>{
     const data = await response.json();
     //making sure it works
     console.log('Done!');
+    console.log(data);
     //returning the json object
     return data;
     } 
@@ -62,24 +26,23 @@ catch (errMsg) {
 } 
 
 /* Function to POST data */
-
-const postData= async(url="", dataObject={})=>{
-    try{
-        //posting dataObject with new info
-    const response = await fetch(url,{
-      headers: {
-        "Content-Type": "application/json",
-      },
-        method: "POST",
-        credentials:"same-origin",
-        body: JSON.stringify(dataObject)
-      });
-      //making sure the posting process has happened
-      console.log("Posted!");
-      return response;
-      } catch (error) { // if there is an error it will display
-        console.log("error:" + error);
-      }
+const post = async(url="",data={})=>{
+  const response = await fetch(url,{
+    method : 'POST',
+    mode: 'cors',
+    credentials:'same-origin',
+    headers : {
+      'Content-Type': 'application/json'
+    },
+    body:JSON.stringify(data)
+  })
+  try{
+    const theData = await response.json();
+    return theData;
+  }
+  catch(error){
+    console.log(error);
+  }
 }
 
 /* Updating The UI */
@@ -88,14 +51,48 @@ const updateUI = async () => {
     const response = await fetch("/all");
     try {
       const myData= await response.json();
-      //updating the UI
-      document.getElementById("date").innerHTML = myData.newDate;
-      document.getElementById("city").innerHTML = myData.city;
-      document.getElementById("temp").innerHTML = myData.temp + '&degC';
-      document.getElementById("description").innerHTML = myData.main;
-      document.getElementById("feeling").innerHTML = myData.feelings;
+      console.log(myData);
+      //selecting the elements!
+      let date=document.getElementById("date");
+      let city=document.getElementById("city");
+      let temp=document.getElementById("temp");
+      let description=document.getElementById("description");
+      let feeling=document.getElementById("feeling");
+      //Putting info into UI elements usin text.content
+      date.textContent = "Date: "+myData.newDate;
+      city.textContent = "City: "+myData.city;
+      temp.textContent = "Temperature: "+myData.temperature;
+      description.textContent ="Description: "+ myData.description;
+      feeling.textContent = "How you feel: "+myData.feelingsInput;
 
     } catch (error) {
       console.log("error: "+error);
     }
   };
+
+  // Event listener to add function to existing HTML DOM element
+let generate = document.getElementById('generate'); // selecting the generate button
+generate.addEventListener('click',()=> {                      //selecting zip and feelings user input
+let zipNumber = document.getElementById('zip').value;
+let feelingsInput = document.getElementById('feelings').value;
+getData(zipNumber).then((data) => {
+  console.log(data);
+      //making my own object
+      let city = data.name;
+      let temperature = Math.round(data.main.temp);
+      let description = data.weather[0].description;
+      const weatherInfo = {
+        newDate,
+        city,
+        temperature,
+        description,
+        feelingsInput
+    };
+    //posting the object on the server
+    console.log(weatherInfo);
+    post("http://localhost:3000/add", weatherInfo).then((data)=>{
+      //updating the UI to show the appropriate information
+      updateUI(data);
+    })
+    
+})})
